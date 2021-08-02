@@ -18,6 +18,6 @@ xinput set-button-map 'Lenovo TrackPoint Keyboard II Mouse' 1 10 3 4 5 6 7
 xinput test 'Lenovo TrackPoint Keyboard II Mouse' | tpscrollfix
 ```
 
-###Notes
+### Notes
 - You will need to build the binary  **tpscrollfix**
 - You need to move the binary to `/usr/bin` or where you prefer

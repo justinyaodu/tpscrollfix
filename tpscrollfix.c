@@ -14,53 +14,65 @@
 	if (debug_level >= 1) { printf(NAME ": " __VA_ARGS__); }
 
 #define DEFAULT_BUTTON 10
+#define TRACKPOINT_UP 4
+#define TRACKPOINT_DOWN 5
 #define DEFAULT_COMMAND "xdotool click 2"
 #define DEFAULT_DEBUG_LEVEL 0
 
-int scroll_button = DEFAULT_BUTTON;
-char* click_command = DEFAULT_COMMAND;
-int debug_level = DEFAULT_DEBUG_LEVEL;
+unsigned short int scroll_button = DEFAULT_BUTTON;
+unsigned short int trackpoint_up = TRACKPOINT_UP;
+unsigned short int trackpoint_down = TRACKPOINT_DOWN;
+char *click_command = DEFAULT_COMMAND;
+unsigned short int debug_level = DEFAULT_DEBUG_LEVEL;
 
 void loop()
 {
 	debug_printf("watching button %d\n", scroll_button);
 
-	bool button_released = false;
+    bool send_click = false;
+    bool button_pressed = false;
+    bool moving_trackpoint = false;
 
 	size_t line_size = 64;
 	char* line = malloc(line_size);
+
 	while (getline(&line, &line_size, stdin) != -1)
 	{
-		if (debug_level >= 2)
-		{
-			fprintf(stderr, "\t%s", line);
-		}
+        int axis;
+        int button;
 
-		if (!button_released)
-		{
-			int button;
-			if (sscanf(line, "button release %d", &button) == 1
-					&& button == scroll_button)
-			{
-				debug_printf("button %d released\n", button);
-				button_released = true;
-			}
-		}
-		else
-		{
-			int axis;
-			if (sscanf(line, "motion a[%d]", &axis) == 1
-					&& axis == 3)
-			{
-				debug_printf("ignoring scroll\n");
-			}
-			else
-			{
-				debug_printf("sending click\n");
-				system(click_command);
-			}
-			button_released = false;
-		}
+        // to do not debug the trackpoint motion
+        if (debug_level >= 2 && sscanf(line, "motion a[%d]", &axis) != 1) {
+            fprintf(stderr, "\t%s", line);
+        }
+
+        if (sscanf(line, "button press %d", &button) == 1 && button == scroll_button) {
+            moving_trackpoint = false;
+            button_pressed = true;
+
+            debug_printf("button %d pressed\n", button);
+        }
+
+        if (sscanf(line, "button press %d", &button) == 1 && button_pressed &&
+            (button == trackpoint_up || button == trackpoint_down)
+            ) {
+            moving_trackpoint = true;
+
+            debug_printf("scrolling with %d\n", button);
+        }
+
+        if (sscanf(line, "button release %d", &button) == 1 && button == scroll_button && !moving_trackpoint) {
+            send_click = true;
+            button_pressed = false;
+
+            debug_printf("button %d released\n", button);
+        }
+
+        if (send_click) {
+            send_click = false;
+
+            system(click_command);
+        }
 	}
 
 	free(line);
